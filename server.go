@@ -57,6 +57,8 @@ type ResponseWriter interface {
 	// Hijack lets the caller take over the connection.
 	// After a call to Hijack(), the DNS package will not do anything with the connection.
 	Hijack()
+
+	Msg() *Msg
 }
 
 // A ConnectionStater interface is used by a DNS Handler to access TLS connection state
@@ -77,6 +79,7 @@ type response struct {
 	udpSession     *SessionUDP    // oob data to get egress interface right
 	pcSession      net.Addr       // address to use when writing to a generic net.PacketConn
 	writer         Writer         // writer to output the raw DNS bits
+	msg            *Msg
 }
 
 // handleRefused returns a HandlerFunc that returns REFUSED for every request it gets.
@@ -719,6 +722,10 @@ func (srv *Server) readPacketConn(conn net.PacketConn, timeout time.Duration) ([
 	return m, addr, nil
 }
 
+func (w *response) Msg() *Msg {
+	return w.msg
+}
+
 // WriteMsg implements the ResponseWriter.WriteMsg method.
 func (w *response) WriteMsg(m *Msg) (err error) {
 	if w.closed {
@@ -741,6 +748,7 @@ func (w *response) WriteMsg(m *Msg) (err error) {
 		return err
 	}
 	_, err = w.writer.Write(data)
+	w.msg = m
 	return err
 }
 
